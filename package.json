@@ -1,0 +1,55 @@
+{
+  "name": "smeta-sbc",
+  "version": "1.0.0",
+  "description": "Настольное приложение для расчёта смет по СБЦ",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.15.3",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.3",
+    "sql.js": "^1.14.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^20.11.20",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.4.2",
+    "vite": "^5.4.0"
+  },
+  "build": {
+    "appId": "com.smeta-sbc.app",
+    "productName": "СметаСБЦ",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  }
+}
