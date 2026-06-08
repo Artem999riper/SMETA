@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { loadXlsx } from '../lib/deps'
 
 const api = window.api
 
@@ -55,7 +56,7 @@ export default function ImportPage() {
     const fileRes = await api.import.readFile(fp)
     if (!fileRes.ok) { alert('Ошибка чтения файла: ' + fileRes.error); return }
 
-    const { default: XLSX } = await import('xlsx')
+    const XLSX = await loadXlsx()
     const wb = XLSX.read(fileRes.data, { type: 'base64' })
     setSheets(wb.SheetNames)
     setSelectedSheet(wb.SheetNames[0])
@@ -63,40 +64,76 @@ export default function ImportPage() {
   }
 
   async function loadSheet(wb: unknown, sheetName: string) {
-    const { default: XLSX } = await import('xlsx')
+    const XLSX = await loadXlsx()
     const ws = (wb as ReturnType<typeof XLSX.read>).Sheets[sheetName]
     const aoa: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
     if (aoa.length === 0) return
-    setHeaders(aoa[0].map(String))
+    const hdrs = aoa[0].map(String)
+    setHeaders(hdrs)
     setRawRows(aoa.slice(1).filter(r => r.some(c => c !== '')))
+    setMapping(autoMap(hdrs))
     setStep(2)
+  }
+
+  // Guess column mapping from header names (supports the export format and common Russian headers).
+  function autoMap(hdrs: string[]): Record<string, string> {
+    const find = (...aliases: string[]) => {
+      for (const h of hdrs) {
+        const n = h.toLowerCase().trim()
+        if (aliases.some(a => n === a || n.includes(a))) return h
+      }
+      return ''
+    }
+    return {
+      nomer: find('nomer_punkta', 'номер пункта', 'номер', '№'),
+      nazvanie: find('nazvanie', 'наименование'),
+      edinica: find('edinica', 'единица', 'ед. изм', 'ед.изм'),
+      tip_rabot: find('tip_rabot', 'тип работ', 'вид работ'),
+      cena_1: find('ceny_1', 'цена 1', 'цена кат. 1'),
+      cena_2: find('ceny_2', 'цена 2', 'цена кат. 2'),
+      cena_3: find('ceny_3', 'цена 3', 'цена кат. 3'),
+      cena_4: find('ceny_4', 'цена 4', 'цена кат. 4'),
+      cena_5: find('ceny_5', 'цена 5', 'цена кат. 5'),
+    }
   }
 
   async function reloadSheet(sheetName: string) {
     setSelectedSheet(sheetName)
     const fileRes = await api.import.readFile(filePath)
     if (!fileRes.ok) return
-    const { default: XLSX } = await import('xlsx')
+    const XLSX = await loadXlsx()
     const wb = XLSX.read(fileRes.data, { type: 'base64' })
     loadSheet(wb, sheetName)
   }
 
+  // Map a free-text cell value to one of the three work types.
+  function resolveTip(rawValue: string): string {
+    const v = rawValue.toLowerCase().trim()
+    if (!v) return defaultTipRabot
+    if (v === 'field' || v.startsWith('полев')) return 'field'
+    if (v === 'office' || v.startsWith('камер')) return 'office'
+    if (v === 'all' || v.startsWith('все') || v.startsWith('общ')) return 'all'
+    return defaultTipRabot
+  }
+
+  function buildRow(row: string[], index: number): PreviewRow {
+    const get = (col: string) => col ? String(row[headers.indexOf(col)] ?? '') : ''
+    const ceny: Record<string, number> = {}
+    for (let k = 1; k <= 5; k++) {
+      const col = mapping[`cena_${k}`]
+      if (col) { const v = parseFloat(get(col)); if (!isNaN(v) && v > 0) ceny[String(k)] = v }
+    }
+    return {
+      nomer_punkta: get(mapping.nomer) || String(index + 1),
+      nazvanie: get(mapping.nazvanie),
+      edinica: get(mapping.edinica),
+      tip_rabot: mapping.tip_rabot ? resolveTip(get(mapping.tip_rabot)) : defaultTipRabot,
+      ceny
+    }
+  }
+
   function buildPreview(): PreviewRow[] {
-    return rawRows.slice(0, 20).map(row => {
-      const get = (col: string) => col ? String(row[headers.indexOf(col)] ?? '') : ''
-      const ceny: Record<string, number> = {}
-      for (let k = 1; k <= 5; k++) {
-        const col = mapping[`cena_${k}`]
-        if (col) { const v = parseFloat(get(col)); if (!isNaN(v) && v > 0) ceny[String(k)] = v }
-      }
-      return {
-        nomer_punkta: get(mapping.nomer),
-        nazvanie: get(mapping.nazvanie),
-        edinica: get(mapping.edinica),
-        tip_rabot: defaultTipRabot,
-        ceny
-      }
-    })
+    return rawRows.slice(0, 20).map((row, i) => buildRow(row, i))
   }
 
   function goPreview() {
@@ -109,21 +146,9 @@ export default function ImportPage() {
     if (!selTab) { alert('Выберите целевую таблицу'); return }
     setImporting(true)
 
-    const allRows = rawRows.map(row => {
-      const get = (col: string) => col ? String(row[headers.indexOf(col)] ?? '') : ''
-      const ceny: Record<string, number> = {}
-      for (let k = 1; k <= 5; k++) {
-        const col = mapping[`cena_${k}`]
-        if (col) { const v = parseFloat(get(col)); if (!isNaN(v) && v > 0) ceny[String(k)] = v }
-      }
-      return {
-        nomer_punkta: get(mapping.nomer) || String(rawRows.indexOf(row) + 1),
-        nazvanie: get(mapping.nazvanie),
-        edinica: get(mapping.edinica),
-        tip_rabot: defaultTipRabot,
-        ceny
-      }
-    }).filter(r => r.nazvanie.trim() !== '')
+    const allRows = rawRows
+      .map((row, i) => buildRow(row, i))
+      .filter(r => r.nazvanie.trim() !== '')
 
     const res = await api.import.savePozicii({ tablica_id: parseInt(selTab), rows: allRows })
     setImporting(false)
@@ -193,6 +218,7 @@ export default function ImportPage() {
                 { key: 'nomer', label: 'Номер пункта' },
                 { key: 'nazvanie', label: 'Наименование *' },
                 { key: 'edinica', label: 'Единица измерения' },
+                { key: 'tip_rabot', label: 'Тип работ (колонка)' },
                 { key: 'cena_1', label: 'Цена кат. 1' },
                 { key: 'cena_2', label: 'Цена кат. 2' },
                 { key: 'cena_3', label: 'Цена кат. 3' },
@@ -209,7 +235,7 @@ export default function ImportPage() {
               ))}
             </div>
             <div className="mt-3">
-              <label className="text-xs text-slate-600">Тип работ по умолчанию</label>
+              <label className="text-xs text-slate-600">Тип работ по умолчанию (если колонка не выбрана)</label>
               <select className="input text-sm w-48" value={defaultTipRabot} onChange={e => setDefaultTipRabot(e.target.value)}>
                 <option value="field">Полевые</option>
                 <option value="office">Камеральные</option>

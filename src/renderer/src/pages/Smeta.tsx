@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { loadXlsx, loadJsPdf, loadAutoTable } from '../lib/deps'
 
 const api = window.api
 
@@ -551,7 +552,7 @@ function KoefEditor({ allKoef, selected, onSave, onClose }: {
 
 function ExportButtons({ smetaId, smetaName }: { smetaId: number; smetaName: string }) {
   async function exportXlsx() {
-    const { default: XLSX } = await import('xlsx')
+    const XLSX = await loadXlsx()
     const data = await api.export.getSmetaData(smetaId)
     if (!data) return
 
@@ -603,8 +604,8 @@ function ExportButtons({ smetaId, smetaName }: { smetaId: number; smetaName: str
   }
 
   async function exportPdf() {
-    const { default: jsPDF } = await import('jspdf')
-    const { default: autoTable } = await import('jspdf-autotable')
+    const jsPDF = await loadJsPdf()
+    const autoTable = await loadAutoTable()
     const data = await api.export.getSmetaData(smetaId)
     if (!data) return
 

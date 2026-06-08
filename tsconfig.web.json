@@ -9,6 +9,7 @@
     "jsx": "react-jsx",
     "lib": ["ESNext", "DOM"],
     "skipLibCheck": true,
+    "baseUrl": ".",
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]
     }

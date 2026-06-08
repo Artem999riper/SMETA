@@ -119,8 +119,21 @@ function migrate(db: Database): void {
   `)
 }
 
+// sql.js cannot bind `undefined` (and rejects other non-primitive types).
+// Normalize every param to a value SQLite accepts: undefined → null,
+// booleans → 0/1, objects → JSON string.
+function sanitize(params: unknown[]): (string | number | Uint8Array | null)[] {
+  return params.map((p) => {
+    if (p === undefined || p === null) return null
+    if (typeof p === 'boolean') return p ? 1 : 0
+    if (typeof p === 'number' || typeof p === 'string') return p
+    if (p instanceof Uint8Array) return p
+    return JSON.stringify(p)
+  })
+}
+
 export function run(db: Database, sql: string, params: unknown[] = []): { lastInsertRowid: number; changes: number } {
-  db.run(sql, params as never[])
+  db.run(sql, sanitize(params) as never[])
   save()
   const lastId = db.exec('SELECT last_insert_rowid() as id')
   return {
@@ -130,7 +143,7 @@ export function run(db: Database, sql: string, params: unknown[] = []): { lastIn
 }
 
 export function queryAll(db: Database, sql: string, params: unknown[] = []): Record<string, unknown>[] {
-  const res = db.exec(sql, params as never[])
+  const res = db.exec(sql, sanitize(params) as never[])
   if (!res.length) return []
   const { columns, values } = res[0]
   return values.map(row => {

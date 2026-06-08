@@ -39,12 +39,16 @@ export default function Koefficienty() {
   }
 
   async function save() {
+    const znach = parseFloat((form.znachenie || '').replace(',', '.'))
+    if (isNaN(znach)) { alert('Укажите числовое значение'); return }
     if (tab === 'koef') {
-      const data = { kod: form.kod, nazvanie: form.nazvanie, znachenie: parseFloat(form.znachenie), uslovie: form.uslovie || undefined, k_chemu: form.k_chemu }
+      if (!(form.kod || '').trim() || !(form.nazvanie || '').trim()) { alert('Укажите код и наименование коэффициента'); return }
+      const data = { kod: form.kod, nazvanie: form.nazvanie, znachenie: znach, uslovie: form.uslovie || undefined, k_chemu: form.k_chemu || 'all' }
       if (editItem) await api.koefficienty.update(editItem.id, data)
       else await api.koefficienty.create(data)
     } else {
-      const data = { period: form.period, znachenie: parseFloat(form.znachenie), istochnik: form.istochnik || undefined }
+      if (!(form.period || '').trim()) { alert('Укажите период'); return }
+      const data = { period: form.period, znachenie: znach, istochnik: form.istochnik || undefined }
       if (editItem) await api.indeksy.update(editItem.id, data)
       else await api.indeksy.create(data)
     }

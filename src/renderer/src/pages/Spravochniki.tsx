@@ -56,17 +56,27 @@ export default function Spravochniki() {
   }
 
   async function saveItem() {
+    // Validate required fields up front (NOT NULL columns in DB).
+    const req = (v: string | undefined) => (v ?? '').trim()
+    if (modal === 'spr' && !req(form.nazvanie)) { alert('Укажите наименование справочника'); return }
+    if (modal === 'glava' && (!req(form.nomer) || !req(form.nazvanie))) { alert('Укажите номер и наименование главы'); return }
+    if (modal === 'tab' && (!req(form.nomer) || !req(form.nazvanie))) { alert('Укажите номер и наименование таблицы'); return }
+    if (modal === 'poz' && (!req(form.nomer_punkta) || !req(form.nazvanie))) { alert('Укажите номер пункта и наименование расценки'); return }
+
     if (modal === 'spr') {
-      if (editItem) await api.spravochniki.update(editItem.id as number, { kod: form.kod, nazvanie: form.nazvanie, god: form.god ? parseInt(form.god) : undefined, redakciya: form.redakciya })
-      else await api.spravochniki.create({ kod: form.kod || 'NEW', nazvanie: form.nazvanie, god: form.god ? parseInt(form.god) : undefined, redakciya: form.redakciya })
+      const sprData = { kod: form.kod || 'NEW', nazvanie: form.nazvanie || '', god: form.god ? parseInt(form.god) : undefined, redakciya: form.redakciya || '' }
+      if (editItem) await api.spravochniki.update(editItem.id as number, sprData)
+      else await api.spravochniki.create(sprData)
       loadSpr()
     } else if (modal === 'glava' && selSpr) {
-      if (editItem) await api.glavy.update(editItem.id as number, { nomer: form.nomer, nazvanie: form.nazvanie })
-      else await api.glavy.create({ spravochnik_id: selSpr.id, nomer: form.nomer, nazvanie: form.nazvanie })
+      const gData = { nomer: form.nomer || '', nazvanie: form.nazvanie || '' }
+      if (editItem) await api.glavy.update(editItem.id as number, gData)
+      else await api.glavy.create({ spravochnik_id: selSpr.id, ...gData })
       loadGlavy(selSpr.id)
     } else if (modal === 'tab' && selGlava) {
-      if (editItem) await api.tablicy.update(editItem.id as number, { nomer: form.nomer, nazvanie: form.nazvanie, edinica: form.edinica })
-      else await api.tablicy.create({ glava_id: selGlava.id, nomer: form.nomer, nazvanie: form.nazvanie, edinica: form.edinica })
+      const tData = { nomer: form.nomer || '', nazvanie: form.nazvanie || '', edinica: form.edinica || '' }
+      if (editItem) await api.tablicy.update(editItem.id as number, tData)
+      else await api.tablicy.create({ glava_id: selGlava.id, ...tData })
       loadTablicy(selGlava.id)
     } else if (modal === 'poz' && selTab) {
       const ceny: Record<string, number> = {}
@@ -75,7 +85,7 @@ export default function Spravochniki() {
       if (form.ceny_3) ceny['3'] = parseFloat(form.ceny_3)
       if (form.ceny_4) ceny['4'] = parseFloat(form.ceny_4)
       if (form.ceny_5) ceny['5'] = parseFloat(form.ceny_5)
-      const data = { nomer_punkta: form.nomer_punkta, nazvanie: form.nazvanie, edinica: form.edinica, tip_rabot: form.tip_rabot || 'all', ceny }
+      const data = { nomer_punkta: form.nomer_punkta || '', nazvanie: form.nazvanie || '', edinica: form.edinica || '', tip_rabot: form.tip_rabot || 'all', ceny }
       if (editItem) await api.pozicii.update(editItem.id as number, data)
       else await api.pozicii.create({ tablica_id: selTab.id, ...data })
       loadPozicii(selTab.id)
@@ -303,9 +313,9 @@ function Column<T extends { id: number; nazvanie: string }>({
             className={`group p-2.5 cursor-pointer flex items-start justify-between gap-1 hover:bg-slate-50 transition-colors ${selected?.id === item.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
           >
             <div className="flex-1 text-sm">{renderLabel(item)}</div>
-            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={e => { e.stopPropagation(); onEdit(item) }} className="text-slate-400 hover:text-blue-600 text-xs px-1">✎</button>
-              <button onClick={e => { e.stopPropagation(); onDelete(item) }} className="text-slate-400 hover:text-red-500 text-xs px-1">✕</button>
+            <div className="flex flex-col gap-1 shrink-0">
+              <button onClick={e => { e.stopPropagation(); onEdit(item) }} title="Редактировать" className="text-slate-400 hover:text-blue-600 text-sm px-1">✎</button>
+              <button onClick={e => { e.stopPropagation(); onDelete(item) }} title="Удалить" className="text-slate-400 hover:text-red-500 text-sm px-1">✕</button>
             </div>
           </div>
         ))}
