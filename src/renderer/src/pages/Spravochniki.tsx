@@ -300,12 +300,12 @@ function Column<T extends { id: number; nazvanie: string }>({
           <div
             key={item.id}
             onClick={() => onSelect(item)}
-            className={`p-2.5 cursor-pointer flex items-start justify-between gap-1 hover:bg-slate-50 transition-colors ${selected?.id === item.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
+            className={`group p-2.5 cursor-pointer flex items-start justify-between gap-1 hover:bg-slate-50 transition-colors ${selected?.id === item.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
           >
             <div className="flex-1 text-sm">{renderLabel(item)}</div>
-            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100">
-              <button onClick={e => { e.stopPropagation(); onEdit(item) }} className="text-slate-300 hover:text-blue-600 text-xs">✎</button>
-              <button onClick={e => { e.stopPropagation(); onDelete(item) }} className="text-slate-300 hover:text-red-500 text-xs">✕</button>
+            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={e => { e.stopPropagation(); onEdit(item) }} className="text-slate-400 hover:text-blue-600 text-xs px-1">✎</button>
+              <button onClick={e => { e.stopPropagation(); onDelete(item) }} className="text-slate-400 hover:text-red-500 text-xs px-1">✕</button>
             </div>
           </div>
         ))}

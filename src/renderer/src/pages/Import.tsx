@@ -56,8 +56,7 @@ export default function ImportPage() {
     if (!fileRes.ok) { alert('Ошибка чтения файла: ' + fileRes.error); return }
 
     const { default: XLSX } = await import('xlsx')
-    const buf = Buffer.from(fileRes.data, 'base64')
-    const wb = XLSX.read(buf, { type: 'buffer' })
+    const wb = XLSX.read(fileRes.data, { type: 'base64' })
     setSheets(wb.SheetNames)
     setSelectedSheet(wb.SheetNames[0])
     loadSheet(wb, wb.SheetNames[0])
@@ -78,8 +77,7 @@ export default function ImportPage() {
     const fileRes = await api.import.readFile(filePath)
     if (!fileRes.ok) return
     const { default: XLSX } = await import('xlsx')
-    const buf = Buffer.from(fileRes.data, 'base64')
-    const wb = XLSX.read(buf, { type: 'buffer' })
+    const wb = XLSX.read(fileRes.data, { type: 'base64' })
     loadSheet(wb, sheetName)
   }
 
